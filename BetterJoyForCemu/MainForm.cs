@@ -313,7 +313,31 @@ namespace BetterJoyForCemu {
 				Trace.WriteLine(String.Format("rw {0}, column {1}, {2}, {3}", coord.Row, coord.Column, sender.GetType(), KeyCtl));
 			}
 		}
-		private void StartCalibrate(object sender, EventArgs e) {
+
+        bool form3rdPartyActive = false; // Use to make sure only one instance is opened at the same time
+        public void Config3rdParty(object sender, MouseEventArgs e) {
+            Button button = sender as Button;
+
+            if (nonOriginal && !form3rdPartyActive && e.Button == MouseButtons.Right && button.Tag.GetType() == typeof(Joycon)) {
+                Joycon v = (Joycon)button.Tag;
+                Config3rdPartyForm configForm = new Config3rdPartyForm(v);
+                configForm.FormClosing += new FormClosingEventHandler(Form1_FormClosing);
+                configForm.Show();
+                form3rdPartyActive = true;
+            }
+
+        }
+
+        private void Form1_FormClosing(object sender, EventArgs e) {
+            form3rdPartyActive = false;
+            Config3rdPartyForm instance3rdPartyForm = (Config3rdPartyForm)sender;
+            if (instance3rdPartyForm.getStatus()) {
+                Application.Restart();
+                Environment.Exit(0);
+            }
+        }
+
+        private void StartCalibrate(object sender, EventArgs e) {
 			if (Program.mgr.j.Count == 0) {
 				this.console.Text = "Please connect a single pro controller.";
 				return;

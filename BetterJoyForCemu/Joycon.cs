@@ -123,6 +123,8 @@ namespace BetterJoyForCemu {
         private float filterweight;
         private const uint report_len = 49;
 
+
+
         private struct Rumble {
             private float h_f, l_f;
             public float t, amp, fullamp;
@@ -238,6 +240,8 @@ namespace BetterJoyForCemu {
         public string serial_number;
 
         private float[] activeData;
+
+        public System.Windows.Forms.Button btn;
 
         public Joycon(IntPtr handle_, bool imu, bool localize, float alpha, bool left, string path, string serialNum, int id = 0, bool isPro = false, bool isSnes = false) {
             serial_number = serialNum;
