@@ -78,6 +78,9 @@ namespace BetterJoyForCemu {
         private float[] stick = { 0, 0 };
         private float[] stick2 = { 0, 0 };
 
+        private ushort[] custom_calib;
+        private ushort[] custom_calib2;
+
         private IntPtr handle;
 
         byte[] default_buf = { 0x0, 0x1, 0x40, 0x40, 0x0, 0x1, 0x40, 0x40 };
@@ -245,7 +248,7 @@ namespace BetterJoyForCemu {
 
         public System.Windows.Forms.Button btn;
 
-        public Joycon(IntPtr handle_, bool imu, bool localize, float alpha, bool left, string path, string serialNum, int id = 0, bool isPro = false, bool isSnes = false) {
+        public Joycon(IntPtr handle_, bool imu, bool localize, float alpha, bool left, string path, string serialNum, int id = 0, bool isPro = false, bool isSnes = false, ushort[] custom_calib = null, ushort[] custom_calib2 = null) {
             serial_number = serialNum;
             activeData = new float[6];
             handle = handle_;
@@ -266,6 +269,9 @@ namespace BetterJoyForCemu {
             this.path = path;
 
             connection = isUSB ? 0x01 : 0x02;
+
+            this.custom_calib = custom_calib;
+            this.custom_calib2 = custom_calib2;
 
             if (showAsXInput) {
                 out_xbox = new OutputControllerXbox360();
@@ -313,11 +319,36 @@ namespace BetterJoyForCemu {
         public bool GetButtonUp(Button b) {
             return buttons_up[(int)b];
         }
+
+        public UInt16[] GetRawStick() {
+            return stick_precal;
+        }
+
+        public UInt16[] GetRawStick2() {
+            return stick2_precal;
+        }
+
+        public UInt16[] GetCustomCalib() {
+            return custom_calib;
+        }
+
+        public UInt16[] GetCustomCalib2() {
+            return custom_calib2;
+        }
+
         public float[] GetStick() {
-            return stick;
+            if (custom_calib[0] == 0) {
+                return stick;
+            } else {
+                return new float[] { Convert.ToSingle(stick_precal[0]-custom_calib[1]) / Convert.ToSingle(custom_calib[0]-custom_calib[1]), Convert.ToSingle(stick_precal[1]-custom_calib[3]) / Convert.ToSingle(custom_calib[2]-custom_calib[3]) };
+            }
         }
         public float[] GetStick2() {
-            return stick2;
+            if (custom_calib2[0] == 0) {
+                return stick2;
+            } else {
+                return new float[] { Convert.ToSingle(stick2_precal[0] - custom_calib2[1]) / Convert.ToSingle(custom_calib2[0] - custom_calib2[1]), Convert.ToSingle(stick2_precal[1] - custom_calib2[3]) / Convert.ToSingle(custom_calib2[2] - custom_calib2[3]) };
+            }
         }
         public Vector3 GetGyro() {
             return gyr_g;

@@ -98,6 +98,8 @@ namespace BetterJoyForCemu {
 
             // Add instance of 3rdParty type selector
             Selector3rdPartyType selector = new Selector3rdPartyType();
+            ushort[] custom_calib = null;
+            ushort[] custom_calib2 = null;
             if (form.nonOriginal) {
                 selector.Load();
             }
@@ -120,6 +122,8 @@ namespace BetterJoyForCemu {
 
                 if (form.nonOriginal) {
                     enumerate.product_id = selector.GetProductId(enumerate.serial_number); // Check if this is a known controller
+                    custom_calib = selector.GetCalib(enumerate.serial_number);
+                    custom_calib2 = selector.GetCalib2(enumerate.serial_number);
                 }
 
                 bool validController = (enumerate.product_id == product_l || enumerate.product_id == product_r ||
@@ -174,7 +178,7 @@ namespace BetterJoyForCemu {
 
                     bool isPro = enumerate.product_id == product_pro;
                     bool isSnes = enumerate.product_id == product_snes;
-                    j.Add(new Joycon(handle, EnableIMU, EnableLocalize & EnableIMU, 0.05f, isLeft, enumerate.path, enumerate.serial_number, j.Count, isPro, isSnes));
+                    j.Add(new Joycon(handle, EnableIMU, EnableLocalize & EnableIMU, 0.05f, isLeft, enumerate.path, enumerate.serial_number, j.Count, isPro, isSnes, custom_calib, custom_calib2));
 
                     foundNew = true;
                     j.Last().form = form;
