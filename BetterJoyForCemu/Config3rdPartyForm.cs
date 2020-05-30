@@ -355,7 +355,7 @@ namespace BetterJoyForCemu
                     }
                 }
 
-                Thread.Sleep(10);
+                Thread.Sleep(30);
 
             }
 
