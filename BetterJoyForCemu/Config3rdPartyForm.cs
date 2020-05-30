@@ -33,7 +33,6 @@ namespace BetterJoyForCemu
         private RadioButton SnesRadio;
         private RadioButton RightRadio;
         private Button ApplyBtn;
-        private Button RightJoystick;
         Joycon j;
 
         Thread th;
@@ -49,6 +48,7 @@ namespace BetterJoyForCemu
         UInt16[] calib2;
         float[] current = new float[2];
         float[] current2 = new float[2];
+        private PictureBox RightJoystick;
         RectangleF r;
 
         private void GetColor()
@@ -97,23 +97,27 @@ namespace BetterJoyForCemu
                 ControllerBtn.BackgroundImage = global::BetterJoyForCemu.Properties.Resources.pro;
                 ProRadio.Checked = true;
                 RightJoystick.Enabled = true;
+                RightJoystick.BackColor = Color.White;
             }
             else if (j.isSnes) {
                 ControllerBtn.BackgroundImage = global::BetterJoyForCemu.Properties.Resources.snes;
                 SnesRadio.Checked = true;
                 RightJoystick.Enabled = false;
+                RightJoystick.BackColor = Color.Gray;
             }
             else if (j.isLeft)
             {
                 ControllerBtn.BackgroundImage = global::BetterJoyForCemu.Properties.Resources.jc_left;
                 LeftRadio.Checked = true;
                 RightJoystick.Enabled = false;
+                RightJoystick.BackColor = Color.Gray;
             }
             else
             {
                 ControllerBtn.BackgroundImage = global::BetterJoyForCemu.Properties.Resources.jc_right;
                 RightRadio.Checked = true;
                 RightJoystick.Enabled = false;
+                RightJoystick.BackColor = Color.Gray;
             }
 
         }
@@ -128,12 +132,13 @@ namespace BetterJoyForCemu
             this.LeftRadio = new System.Windows.Forms.RadioButton();
             this.ProRadio = new System.Windows.Forms.RadioButton();
             this.ApplyBtn = new System.Windows.Forms.Button();
-            this.RightJoystick = new System.Windows.Forms.Button();
             this.LeftJoystick = new System.Windows.Forms.PictureBox();
             this.LeftJoyOutput = new System.Windows.Forms.Label();
             this.RightJoyOutput = new System.Windows.Forms.Label();
+            this.RightJoystick = new System.Windows.Forms.PictureBox();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.LeftJoystick)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.RightJoystick)).BeginInit();
             this.SuspendLayout();
             // 
             // ControllerBtn
@@ -225,16 +230,6 @@ namespace BetterJoyForCemu
             this.ApplyBtn.UseVisualStyleBackColor = true;
             this.ApplyBtn.Click += new System.EventHandler(this.ApplyBtn_Click);
             // 
-            // RightJoystick
-            // 
-            this.RightJoystick.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("RightJoystick.BackgroundImage")));
-            this.RightJoystick.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.RightJoystick.Location = new System.Drawing.Point(105, 112);
-            this.RightJoystick.Name = "RightJoystick";
-            this.RightJoystick.Size = new System.Drawing.Size(95, 94);
-            this.RightJoystick.TabIndex = 5;
-            this.RightJoystick.UseVisualStyleBackColor = true;
-            // 
             // LeftJoystick
             // 
             this.LeftJoystick.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LeftJoystick.BackgroundImage")));
@@ -260,22 +255,34 @@ namespace BetterJoyForCemu
             // RightJoyOutput
             // 
             this.RightJoyOutput.AutoSize = true;
-            this.RightJoyOutput.Location = new System.Drawing.Point(125, 207);
+            this.RightJoyOutput.Location = new System.Drawing.Point(124, 207);
             this.RightJoyOutput.Name = "RightJoyOutput";
             this.RightJoyOutput.Size = new System.Drawing.Size(58, 13);
             this.RightJoyOutput.TabIndex = 8;
             this.RightJoyOutput.Text = "(0.00,0.00)";
             this.RightJoyOutput.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
+            // RightJoystick
+            // 
+            this.RightJoystick.BackColor = System.Drawing.SystemColors.ControlDark;
+            this.RightJoystick.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("RightJoystick.BackgroundImage")));
+            this.RightJoystick.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+            this.RightJoystick.Location = new System.Drawing.Point(106, 112);
+            this.RightJoystick.Name = "RightJoystick";
+            this.RightJoystick.Size = new System.Drawing.Size(94, 94);
+            this.RightJoystick.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.RightJoystick.TabIndex = 9;
+            this.RightJoystick.TabStop = false;
+            // 
             // Config3rdPartyForm
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Inherit;
             this.AutoSize = true;
             this.ClientSize = new System.Drawing.Size(207, 259);
+            this.Controls.Add(this.RightJoystick);
             this.Controls.Add(this.RightJoyOutput);
             this.Controls.Add(this.LeftJoyOutput);
             this.Controls.Add(this.LeftJoystick);
-            this.Controls.Add(this.RightJoystick);
             this.Controls.Add(this.ApplyBtn);
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.serial_label);
@@ -288,6 +295,7 @@ namespace BetterJoyForCemu
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.LeftJoystick)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.RightJoystick)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -327,17 +335,27 @@ namespace BetterJoyForCemu
             while (drawing) {
                 r = UpdatePoints(j.GetRawStick()[0], j.GetRawStick()[1]);
                 g.FillEllipse(Brushes.Red, r);
-                this.LeftJoyOutput.BeginInvoke((MethodInvoker)delegate () { this.LeftJoyOutput.Text = "(" + String.Format("{0:0.00}", current[0]) + "," + String.Format("{0:0.00}", current[1]) + ")"; ; });
-                this.LeftJoystick.BeginInvoke((MethodInvoker)delegate () { this.LeftJoystick.Refresh(); ; });
 
+                try {
+                    this.LeftJoyOutput.BeginInvoke((MethodInvoker)delegate () { this.LeftJoyOutput.Text = "(" + String.Format("{0:0.00}", current[0]) + "," + String.Format("{0:0.00}", current[1]) + ")"; ; });
+                    this.LeftJoystick.BeginInvoke((MethodInvoker)delegate () { this.LeftJoystick.Refresh(); ; });
+                } catch(System.InvalidOperationException) {
+                    drawing = false;
+                    break;
+                }
                 if (RightJoystick.Enabled) {
                     r = UpdatePoints2(j.GetRawStick2()[0], j.GetRawStick2()[1]);
                     g2.FillEllipse(Brushes.Red, r);
-                    this.RightJoyOutput.BeginInvoke((MethodInvoker)delegate () { this.RightJoyOutput.Text = "(" + String.Format("{0:0.00}", current2[0]) + "," + String.Format("{0:0.00}", current2[1]) + ")"; ; });
-                    this.RightJoystick.BeginInvoke((MethodInvoker)delegate () { this.RightJoystick.Refresh(); ; });
+                    try {
+                        this.RightJoyOutput.BeginInvoke((MethodInvoker)delegate () { this.RightJoyOutput.Text = "(" + String.Format("{0:0.00}", current2[0]) + "," + String.Format("{0:0.00}", current2[1]) + ")"; ; });
+                        this.RightJoystick.BeginInvoke((MethodInvoker)delegate () { this.RightJoystick.Refresh(); ; });
+                    } catch (System.InvalidOperationException) {
+                        drawing = false;
+                        break;
+                    }
                 }
 
-                Thread.Sleep(100);
+                Thread.Sleep(10);
 
             }
 
@@ -420,5 +438,20 @@ namespace BetterJoyForCemu
             th.IsBackground = true;
             th.Start();
         }
+
+        private void Config3rdPartyForm_FormClosing(object sender, EventArgs e) {
+            drawing = false;
+        }
+
+        /*private void center_range_MouseClick(object sender, MouseEventArgs e) {
+
+            if (e.Button == MouseButtons.Right) {
+                    //(this.center_range.Image.Size.Width + 10, this.center_range.Image.Size.Height +10);
+                this.center_range.Size = new System.Drawing.Size(this.center_range.Size.Width - 10, this.center_range.Size.Height - 10);
+            } else {
+                this.center_range.Size = new System.Drawing.Size(this.center_range.Size.Width + 10, this.center_range.Size.Height + 10);
+            }
+
+        }*/
     }
 }

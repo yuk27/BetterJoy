@@ -99,9 +99,9 @@ namespace BetterJoyForCemu
             }
             else
             { //If the controller already exists modify it
-                Controllers.ForEach(c => c.product_id = type);
-                Controllers.ForEach(c => c.calib = calib);
-                Controllers.ForEach(c => c.calib2 = calib2);
+                serialList.ForEach(c => c.product_id = type);
+                serialList.ForEach(c => c.calib = calib);
+                serialList.ForEach(c => c.calib2 = calib2);
             }
         }
 
