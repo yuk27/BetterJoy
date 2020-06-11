@@ -409,8 +409,6 @@ namespace BetterJoyForCemu {
 
             BlinkHomeLight();
 
-            a[0] = leds_;
-            Subcommand(0x30, a, 1);
             Subcommand(0x40, new byte[] { (imu_enabled ? (byte)0x1 : (byte)0x0) }, 1, true);
             Subcommand(0x48, new byte[] { 0x01 }, 1, true);
 
@@ -418,6 +416,8 @@ namespace BetterJoyForCemu {
 
             Subcommand(0x3, new byte[] { 0x30 }, 1, true);
             DebugPrint("Done with init.", DebugType.COMMS);
+
+            SetPlayerLED(leds_);
 
             HIDapi.hid_set_nonblocking(handle, 1);
 
@@ -432,7 +432,7 @@ namespace BetterJoyForCemu {
             byte[] a = Enumerable.Repeat((byte)0xFF, 25).ToArray();
             a[0] = 0x18;
             a[1] = 0x01;
-            Subcommand(0x38, a, 25, false);
+            Subcommand(0x38, a, 25);
         }
 
         public void SetHomeLight(bool on) {
@@ -444,12 +444,12 @@ namespace BetterJoyForCemu {
                 a[0] = 0x10;
                 a[1] = 0x01;
             }
-            Subcommand(0x38, a, 25, true, false);
+            Subcommand(0x38, a, 25);
         }
 
         private void SetHCIState(byte state) {
             byte[] a = { state };
-            Subcommand(0x06, a, 1, false);
+            Subcommand(0x06, a, 1);
         }
 
         public void PowerOff() {
@@ -519,14 +519,11 @@ namespace BetterJoyForCemu {
             state = state_.NOT_ATTACHED;
         }
 
-        // TODO: Improve this loop, make USB not laggy
         private byte ts_en;
         private int ReceiveRaw() {
             if (handle == IntPtr.Zero) return -2;
             byte[] raw_buf = new byte[report_len];
             int ret = HIDapi.hid_read_timeout(handle, raw_buf, new UIntPtr(report_len), 5);
-
-
 
             if (ret > 0) {
                 // Process packets as soon as they come
@@ -756,8 +753,7 @@ namespace BetterJoyForCemu {
             }
         }
 
-        // TODO: Fix?
-        private Thread PollThreadObj; // pro times out over time randomly if it was USB and then bluetooth??
+        private Thread PollThreadObj;
         private void Poll() {
             stop_polling = false;
             int attempts = 0;
@@ -770,11 +766,8 @@ namespace BetterJoyForCemu {
                 int a = ReceiveRaw();
 
                 if (a > 0 && state > state_.DROPPED) {
-
-
                     state = state_.IMU_DATA_OK;
                     attempts = 0;
-
                 } else if (attempts > 240) {
                     state = state_.DROPPED;
                     form.AppendTextBox("Dropped.\r\n");
