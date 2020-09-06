@@ -120,7 +120,7 @@ namespace BetterJoyForCemu {
                     continue;
                 }
 
-                if (form.nonOriginal) {
+                if (form.nonOriginal && enumerate.product_string != "Nintendo RVL-CNT-01") {
                     enumerate.product_id = selector.GetProductId(enumerate.serial_number); // Check if this is a known controller
                     custom_calib = selector.GetCalib(enumerate.serial_number);
                     custom_calib2 = selector.GetCalib2(enumerate.serial_number);
