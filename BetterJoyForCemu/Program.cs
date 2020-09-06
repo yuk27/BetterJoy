@@ -118,7 +118,10 @@ namespace BetterJoyForCemu {
             if (form.nonOriginal) {
                 selector.Load();
             }
+            return 0;
+        }
 
+        public void CheckForNewControllers() {
             // move all code for initializing devices here and well as the initial code from Start()
             bool isLeft = false;
             IntPtr ptr = HIDapi.hid_enumerate(0x0, 0x0);
