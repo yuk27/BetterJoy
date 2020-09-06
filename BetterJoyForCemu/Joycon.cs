@@ -659,7 +659,7 @@ namespace BetterJoyForCemu {
                 }
             }
 
-            int minusButton = (int)((isLeft) ? Button.MINUS : Button.PLUS);
+            int minusButton = (int)((isLeft) ? Button.MINUS : Button.PLUS); //TODO: JC WIP SWAP WIDEWAYS AND UPRIGHT
             
             bool b = buttons_down[minusButton];
             long l = (timestamp - buttons_down_timestamp[powerOffButton]) / 10000000;
