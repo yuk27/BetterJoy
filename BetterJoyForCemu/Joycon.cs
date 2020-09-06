@@ -659,6 +659,15 @@ namespace BetterJoyForCemu {
                 }
             }
 
+            int minusButton = (int)((isLeft) ? Button.MINUS : Button.PLUS);
+            
+            bool b = buttons_down[minusButton];
+            long l = (timestamp - buttons_down_timestamp[powerOffButton]) / 10000000;
+
+            if (buttons_down[minusButton] && (timestamp - buttons_down_timestamp[powerOffButton]) / 10000000 > 5000) {
+                form.conBtnClick(btn, null);
+            }
+            
             if (buttons_down[(int)Button.CAPTURE])
                 Simulate(Config.Value("capture"));
             if (buttons_down[(int)Button.HOME])
