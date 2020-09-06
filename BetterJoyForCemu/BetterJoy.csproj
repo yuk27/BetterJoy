@@ -131,9 +131,6 @@
       <DependentUpon>3rdPartyControllers.cs</DependentUpon>
     </Compile>
     <Compile Include="Config.cs" />
-    <Compile Include="Config3rdPartyForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
     <Compile Include="Controller\OutputControllerDualShock4.cs" />
     <Compile Include="Controller\OutputControllerXbox360.cs" />
     <Compile Include="HIDapi.cs" />
@@ -157,7 +154,6 @@
     <Compile Include="Reassign.Designer.cs">
       <DependentUpon>Reassign.cs</DependentUpon>
     </Compile>
-    <Compile Include="Selector3rdPartyType.cs" />
     <Compile Include="UpdServer.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -253,9 +249,6 @@
   <ItemGroup>
     <EmbeddedResource Include="3rdPartyControllers.resx">
       <DependentUpon>3rdPartyControllers.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Config3rdPartyForm.resx">
-      <DependentUpon>Config3rdPartyForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>

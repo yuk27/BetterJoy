@@ -109,19 +109,6 @@ namespace BetterJoyForCemu {
         }
 
         public void CheckForNewControllers() {
-            //CleanUp();
-
-            // Add instance of 3rdParty type selector
-            Selector3rdPartyType selector = new Selector3rdPartyType();
-            ushort[] custom_calib = null;
-            ushort[] custom_calib2 = null;
-            if (form.nonOriginal) {
-                selector.Load();
-            }
-            return 0;
-        }
-
-        public void CheckForNewControllers() {
             // move all code for initializing devices here and well as the initial code from Start()
             bool isLeft = false;
             IntPtr ptr = HIDapi.hid_enumerate(0x0, 0x0);
@@ -139,10 +126,8 @@ namespace BetterJoyForCemu {
                     continue;
                 }*/
 
-                if (form.nonOriginal && enumerate.product_string != "Nintendo RVL-CNT-01") {
-                    enumerate.product_id = selector.GetProductId(enumerate.serial_number); // Check if this is a known controller
-                    custom_calib = selector.GetCalib(enumerate.serial_number);
-                    custom_calib2 = selector.GetCalib2(enumerate.serial_number);
+                if (form.nonOriginal) {
+                    enumerate.product_id = product_pro;
                 }
 
                 bool validController = (enumerate.product_id == product_l || enumerate.product_id == product_r ||
@@ -209,7 +194,7 @@ namespace BetterJoyForCemu {
 
                     bool isPro = prod_id == product_pro;
                     bool isSnes = prod_id == product_snes;
-                    j.Add(new Joycon(handle, EnableIMU, EnableLocalize & EnableIMU, 0.05f, isLeft, enumerate.path, enumerate.serial_number, j.Count, isPro, isSnes, custom_calib, custom_calib2, thirdParty != null));
+                    j.Add(new Joycon(handle, EnableIMU, EnableLocalize & EnableIMU, 0.05f, isLeft, enumerate.path, enumerate.serial_number, j.Count, isPro, isSnes, thirdParty != null));
 
                     foundNew = true;
                     j.Last().form = form;
