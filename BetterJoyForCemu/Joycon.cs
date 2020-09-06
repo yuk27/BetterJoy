@@ -246,6 +246,9 @@ namespace BetterJoyForCemu {
         public string serial_number;
         bool thirdParty = false;
 
+        public System.Windows.Forms.Button btn;
+
+
         private float[] activeData;
 
         public Joycon(IntPtr handle_, bool imu, bool localize, float alpha, bool left, string path, string serialNum, int id = 0, bool isPro = false, bool isSnes = false, bool thirdParty = false) {
