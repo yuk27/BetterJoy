@@ -121,8 +121,6 @@ namespace BetterJoyForCemu {
         private float filterweight;
         private const uint report_len = 49;
 
-
-
         private struct Rumble {
             private float h_f, l_f;
             public float amp, fullamp;

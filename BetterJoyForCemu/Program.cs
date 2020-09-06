@@ -108,12 +108,7 @@ namespace BetterJoyForCemu {
             return 0;
         }
 
-            // Add instance of 3rdParty type selector
-            Selector3rdPartyType selector = new Selector3rdPartyType();
-            if (form.nonOriginal) {
-                selector.Load();
-            }
-
+        public void CheckForNewControllers() {
             // move all code for initializing devices here and well as the initial code from Start()
             bool isLeft = false;
             IntPtr ptr = HIDapi.hid_enumerate(0x0, 0x0);
@@ -132,7 +127,7 @@ namespace BetterJoyForCemu {
                 }*/
 
                 if (form.nonOriginal) {
-                    enumerate.product_id = selector.GetProductId(enumerate.serial_number); // Check if this is a known controller
+                    enumerate.product_id = product_pro;
                 }
 
                 bool validController = (enumerate.product_id == product_l || enumerate.product_id == product_r ||
@@ -223,13 +218,10 @@ namespace BetterJoyForCemu {
                                         temp = Properties.Resources.cross; break;
                                 }
 
-                                j.Last().btn = v;
-
                                 v.Invoke(new MethodInvoker(delegate {
                                     v.Tag = j.Last(); // assign controller to button
                                     v.Enabled = true;
                                     v.Click += new EventHandler(form.conBtnClick);
-                                    v.MouseDown += new MouseEventHandler(form.Config3rdParty); // Add Handler for the 3rd party type selector
                                     v.BackgroundImage = temp;
                                 }));
 
