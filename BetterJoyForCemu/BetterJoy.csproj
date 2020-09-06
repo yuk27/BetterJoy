@@ -131,6 +131,7 @@
       <DependentUpon>3rdPartyControllers.cs</DependentUpon>
     </Compile>
     <Compile Include="Config.cs" />
+    <Compile Include="Config3rdPartyForm.cs" />
     <Compile Include="Controller\OutputControllerDualShock4.cs" />
     <Compile Include="Controller\OutputControllerXbox360.cs" />
     <Compile Include="HIDapi.cs" />
@@ -250,6 +251,9 @@
   <ItemGroup>
     <EmbeddedResource Include="3rdPartyControllers.resx">
       <DependentUpon>3rdPartyControllers.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Config3rdPartyForm.resx">
+      <DependentUpon>Config3rdPartyForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
