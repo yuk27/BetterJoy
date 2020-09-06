@@ -76,6 +76,9 @@ namespace BetterJoyForCemu {
         private float[] stick = { 0, 0 };
         private float[] stick2 = { 0, 0 };
 
+        private ushort[] custom_calib;
+        private ushort[] custom_calib2;
+
         private IntPtr handle;
 
         byte[] default_buf = { 0x0, 0x1, 0x40, 0x40, 0x0, 0x1, 0x40, 0x40 };
@@ -320,6 +323,23 @@ namespace BetterJoyForCemu {
         public bool GetButtonUp(Button b) {
             return buttons_up[(int)b];
         }
+        public UInt16[] GetRawStick() {
+            return stick_precal;
+        }
+
+        public UInt16[] GetRawStick2() {
+            return stick2_precal;
+        }
+
+        public UInt16[] GetCustomCalib() {
+            return custom_calib;
+        }
+
+        public UInt16[] GetCustomCalib2() {
+            return custom_calib2;
+        }
+
+
         public float[] GetStick() {
             return stick;
         }
@@ -789,7 +809,16 @@ namespace BetterJoyForCemu {
                 stick_precal[1] = (UInt16)((stick_raw[1] >> 4) | (stick_raw[2] << 4));
                 ushort[] cal = form.nonOriginal ? new ushort[6] { 2048, 2048, 2048, 2048, 2048, 2048 } : stick_cal;
                 ushort dz = form.nonOriginal ? (ushort)200 : deadzone;
-                stick = CenterSticks(stick_precal, cal, dz);
+                
+                if (custom_calib == null || custom_calib[0] == 0) {
+                    stick = CenterSticks(stick_precal, cal, dz);
+                } else {
+
+                    float x = Convert.ToSingle(stick_precal[0] - custom_calib[1]) / Convert.ToSingle(custom_calib[0] - custom_calib[1]);
+                    float y = Convert.ToSingle(stick_precal[1] - custom_calib[3]) / Convert.ToSingle(custom_calib[2] - custom_calib[3]);
+
+                    stick = new float[] { 2.1f * (x - 0.5f), 2.1f * (y - 0.5f) };
+                }
 
                 if (isPro) {
                     stick2_precal[0] = (UInt16)(stick2_raw[0] | ((stick2_raw[1] & 0xf) << 8));
