@@ -254,7 +254,7 @@ namespace BetterJoyForCemu {
 
         private float[] activeData;
 
-        public Joycon(IntPtr handle_, bool imu, bool localize, float alpha, bool left, string path, string serialNum, int id = 0, bool isPro = false, bool isSnes = false, bool thirdParty = false) {
+        public Joycon(IntPtr handle_, bool imu, bool localize, float alpha, bool left, string path, string serialNum, int id = 0, bool isPro = false, bool isSnes = false, bool thirdParty = false, ushort[] custom_calib = null, ushort[] custom_calib2 = null) {
             serial_number = serialNum;
             activeData = new float[6];
             handle = handle_;
@@ -271,7 +271,10 @@ namespace BetterJoyForCemu {
             this.isPro = isPro || isSnes;
             this.isSnes = isSnes;
             isUSB = serialNum == "000000000001";
-            thirdParty = thirdParty;
+            this.thirdParty = thirdParty;
+
+            this.custom_calib = custom_calib;
+            this.custom_calib2 = custom_calib2;
 
             this.path = path;
 
