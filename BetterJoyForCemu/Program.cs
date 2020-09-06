@@ -206,7 +206,7 @@ namespace BetterJoyForCemu {
 
                     bool isPro = prod_id == product_pro;
                     bool isSnes = prod_id == product_snes;
-                    j.Add(new Joycon(handle, EnableIMU, EnableLocalize & EnableIMU, 0.05f, isLeft, enumerate.path, enumerate.serial_number, j.Count, isPro, isSnes, thirdParty != null));
+                    j.Add(new Joycon(handle, EnableIMU, EnableLocalize & EnableIMU, 0.05f, isLeft, enumerate.path, enumerate.serial_number, j.Count, isPro, isSnes, custom_calib, custom_calib2, thirdParty != null));
 
                     foundNew = true;
                     j.Last().form = form;
