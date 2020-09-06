@@ -303,54 +303,30 @@ namespace BetterJoyForCemu {
                     }
                 }
 
-				configFile.Save(ConfigurationSaveMode.Modified);
-				ConfigurationManager.RefreshSection(configFile.AppSettings.SectionInformation.Name);
-			} catch (ConfigurationErrorsException) {
-				AppendTextBox("Error writing app settings\r\n");
-				Trace.WriteLine(String.Format("rw {0}, column {1}, {2}, {3}", coord.Row, coord.Column, sender.GetType(), KeyCtl));
-			}
-		}
-
-        bool form3rdPartyActive = false; // Use to make sure only one instance is opened at the same time
-        public void Config3rdParty(object sender, MouseEventArgs e) {
-            Button button = sender as Button;
-
-            if (nonOriginal && !form3rdPartyActive && e.Button == MouseButtons.Right && button.Tag.GetType() == typeof(Joycon)) {
-                Joycon v = (Joycon)button.Tag;
-                Config3rdPartyForm configForm = new Config3rdPartyForm(v);
-                configForm.FormClosing += new FormClosingEventHandler(Form1_FormClosing);
-                configForm.Show();
-                form3rdPartyActive = true;
-            }
-
-        }
-
-        private void Form1_FormClosing(object sender, EventArgs e) {
-            form3rdPartyActive = false;
-            Config3rdPartyForm instance3rdPartyForm = (Config3rdPartyForm)sender;
-            if (instance3rdPartyForm.getStatus()) {
-                Application.Restart();
-                Environment.Exit(0);
+                configFile.Save(ConfigurationSaveMode.Modified);
+                ConfigurationManager.RefreshSection(configFile.AppSettings.SectionInformation.Name);
+            } catch (ConfigurationErrorsException) {
+                AppendTextBox("Error writing app settings\r\n");
+                Trace.WriteLine(String.Format("rw {0}, column {1}, {2}, {3}", coord.Row, coord.Column, sender.GetType(), KeyCtl));
             }
         }
-
         private void StartCalibrate(object sender, EventArgs e) {
-			if (Program.mgr.j.Count == 0) {
-				this.console.Text = "Please connect a single pro controller.";
-				return;
-			}
-			if (Program.mgr.j.Count > 1) {
-				this.console.Text = "Please calibrate one controller at a time (disconnect others).";
-				return;
-			}
-			this.AutoCalibrate.Enabled = false;
-			countDown = new Timer();
-			this.count = 4;
-			this.CountDown(null, null);
-			countDown.Tick += new EventHandler(CountDown);
-			countDown.Interval = 1000;
-			countDown.Enabled = true;
-		}
+            if (Program.mgr.j.Count == 0) {
+                this.console.Text = "Please connect a single pro controller.";
+                return;
+            }
+            if (Program.mgr.j.Count > 1) {
+                this.console.Text = "Please calibrate one controller at a time (disconnect others).";
+                return;
+            }
+            this.AutoCalibrate.Enabled = false;
+            countDown = new Timer();
+            this.count = 4;
+            this.CountDown(null, null);
+            countDown.Tick += new EventHandler(CountDown);
+            countDown.Interval = 1000;
+            countDown.Enabled = true;
+        }
 
         private void StartGetData() {
             this.xG.Clear(); this.yG.Clear(); this.zG.Clear();
