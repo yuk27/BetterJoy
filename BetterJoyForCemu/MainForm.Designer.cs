@@ -1,32 +1,31 @@
 ﻿namespace BetterJoyForCemu {
-	partial class MainForm {
-		/// <summary>
-		/// Required designer variable.
-		/// </summary>
-		private System.ComponentModel.IContainer components = null;
+    partial class MainForm {
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
 
-		/// <summary>
-		/// Clean up any resources being used.
-		/// </summary>
-		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-		protected override void Dispose(bool disposing) {
-			if (disposing && (components != null)) {
-				components.Dispose();
-			}
-			base.Dispose(disposing);
-		}
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing) {
+            if (disposing && (components != null)) {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
 
-		#region Windows Form Designer generated code
+        #region Windows Form Designer generated code
 
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
-		private void InitializeComponent() {
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent() {
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
 			this.console = new System.Windows.Forms.TextBox();
-			this.console_lbl = new System.Windows.Forms.Label();
 			this.notifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
 			this.contextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
 			this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -64,26 +63,17 @@
 			this.console.Multiline = true;
 			this.console.Name = "console";
 			this.console.ReadOnly = true;
+			this.console.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
 			this.console.Size = new System.Drawing.Size(262, 100);
 			this.console.TabIndex = 2;
-			// 
-			// console_lbl
-			// 
-			this.console_lbl.AutoSize = true;
-			this.console_lbl.Location = new System.Drawing.Point(9, 116);
-			this.console_lbl.Name = "console_lbl";
-			this.console_lbl.Size = new System.Drawing.Size(80, 13);
-			this.console_lbl.TabIndex = 1;
-			this.console_lbl.Text = "Console Output";
-			this.console_lbl.TextAlign = System.Drawing.ContentAlignment.TopCenter;
 			// 
 			// notifyIcon
 			// 
 			this.notifyIcon.BalloonTipText = "Double click the tray icon to maximise";
-			this.notifyIcon.BalloonTipTitle = "BetterJoyForCemu";
+			this.notifyIcon.BalloonTipTitle = "BetterJoy";
 			this.notifyIcon.ContextMenuStrip = this.contextMenu;
 			this.notifyIcon.Icon = ((System.Drawing.Icon)(resources.GetObject("notifyIcon.Icon")));
-			this.notifyIcon.Text = "BetterJoyForCemu";
+			this.notifyIcon.Text = "BetterJoy";
 			this.notifyIcon.Visible = true;
 			this.notifyIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.notifyIcon_MouseDoubleClick);
 			// 
@@ -109,7 +99,7 @@
 			this.version_lbl.Name = "version_lbl";
 			this.version_lbl.Size = new System.Drawing.Size(28, 13);
 			this.version_lbl.TabIndex = 2;
-			this.version_lbl.Text = "v6.3";
+			this.version_lbl.Text = "v6.4";
 			// 
 			// passiveScanBox
 			// 
@@ -264,7 +254,7 @@
 			// 
 			// btn_open3rdP
 			// 
-			this.btn_open3rdP.Location = new System.Drawing.Point(188, 112);
+			this.btn_open3rdP.Location = new System.Drawing.Point(93, 112);
 			this.btn_open3rdP.Name = "btn_open3rdP";
 			this.btn_open3rdP.Size = new System.Drawing.Size(86, 20);
 			this.btn_open3rdP.TabIndex = 7;
@@ -336,7 +326,7 @@
 			// 
 			// btn_reassign_open
 			// 
-			this.btn_reassign_open.Location = new System.Drawing.Point(107, 112);
+			this.btn_reassign_open.Location = new System.Drawing.Point(12, 112);
 			this.btn_reassign_open.Name = "btn_reassign_open";
 			this.btn_reassign_open.Size = new System.Drawing.Size(75, 20);
 			this.btn_reassign_open.TabIndex = 13;
@@ -361,7 +351,6 @@
 			this.Controls.Add(this.donationLink);
 			this.Controls.Add(this.passiveScanBox);
 			this.Controls.Add(this.version_lbl);
-			this.Controls.Add(this.console_lbl);
 			this.Controls.Add(this.console);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
@@ -378,16 +367,15 @@
 			this.ResumeLayout(false);
 			this.PerformLayout();
 
-		}
+        }
 
-		#endregion
+        #endregion
 
-		public System.Windows.Forms.TextBox console;
-		private System.Windows.Forms.Label console_lbl;
-		private System.Windows.Forms.NotifyIcon notifyIcon;
-		private System.Windows.Forms.Label version_lbl;
-		private System.Windows.Forms.ContextMenuStrip contextMenu;
-		private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
+        public System.Windows.Forms.TextBox console;
+        private System.Windows.Forms.NotifyIcon notifyIcon;
+        private System.Windows.Forms.Label version_lbl;
+        private System.Windows.Forms.ContextMenuStrip contextMenu;
+        private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
         private System.Windows.Forms.CheckBox passiveScanBox;
         private System.Windows.Forms.LinkLabel donationLink;
         private System.Windows.Forms.GroupBox conCntrls;
@@ -408,6 +396,6 @@
         private System.Windows.Forms.Button settingsApply;
         private System.Windows.Forms.Label foldLbl;
         private System.Windows.Forms.Button AutoCalibrate;
-		private System.Windows.Forms.Button btn_reassign_open;
-	}
+        private System.Windows.Forms.Button btn_reassign_open;
+    }
 }
