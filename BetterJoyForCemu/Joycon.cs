@@ -13,8 +13,6 @@ using Nefarius.ViGEm.Client.Targets.Xbox360;
 
 namespace BetterJoyForCemu {
     public class Joycon {
-        float timing = 120.0f;
-
         public string path = String.Empty;
         public bool isPro = false;
         public bool isSnes = false;
@@ -78,9 +76,6 @@ namespace BetterJoyForCemu {
         private float[] stick = { 0, 0 };
         private float[] stick2 = { 0, 0 };
 
-        private ushort[] custom_calib;
-        private ushort[] custom_calib2;
-
         private IntPtr handle;
 
         byte[] default_buf = { 0x0, 0x1, 0x40, 0x40, 0x0, 0x1, 0x40, 0x40 };
@@ -95,9 +90,7 @@ namespace BetterJoyForCemu {
         private UInt16 deadzone2;
         private UInt16[] stick2_precal = { 0, 0 };
 
-        private bool stop_polling = false;
-        private int timestamp;
-        private bool first_imu_packet = true;
+        private bool stop_polling = true;
         private bool imu_enabled = false;
         private Int16[] acc_r = { 0, 0, 0 };
         private Int16[] acc_neutral = { 0, 0, 0 };
@@ -128,44 +121,52 @@ namespace BetterJoyForCemu {
         private float filterweight;
         private const uint report_len = 49;
 
-
-
         private struct Rumble {
             private float h_f, l_f;
-            public float t, amp, fullamp;
-            public bool timed_rumble;
+            public float amp, fullamp;
+            public bool controller_informed;
+            public long end_rumble_time_milliseconds;
 
-            public void set_vals(float low_freq, float high_freq, float amplitude, int time = 0) {
+            public void set_vals(float low_freq, float high_freq, float amplitude, int rumble_duration_ms = 0) {
                 h_f = high_freq;
                 amp = amplitude;
                 fullamp = amplitude;
                 l_f = low_freq;
-                timed_rumble = false;
-                t = 0;
-                if (time != 0) {
-                    t = time / 1000f;
-                    timed_rumble = true;
+                if (rumble_duration_ms != 0) {
+                    end_rumble_time_milliseconds = DateTimeOffset.Now.ToUnixTimeMilliseconds() + rumble_duration_ms;
+                } else {
+                    end_rumble_time_milliseconds = 0;
                 }
+
+                controller_informed = false;
             }
-            public Rumble(float low_freq, float high_freq, float amplitude, int time = 0) {
+            public Rumble(float low_freq, float high_freq, float amplitude, int rumble_duration_ms = 0) {
                 h_f = high_freq;
                 amp = amplitude;
                 fullamp = amplitude;
                 l_f = low_freq;
-                timed_rumble = false;
-                t = 0;
-                if (time != 0) {
-                    t = time / 1000f;
-                    timed_rumble = true;
+                if (rumble_duration_ms != 0) {
+                    end_rumble_time_milliseconds = DateTimeOffset.Now.ToUnixTimeMilliseconds() + rumble_duration_ms;
+                } else {
+                    end_rumble_time_milliseconds = 0;
                 }
+                controller_informed = false;
             }
             private float clamp(float x, float min, float max) {
                 if (x < min) return min;
                 if (x > max) return max;
                 return x;
             }
+            public void Update() {
+                if (end_rumble_time_milliseconds != 0 && DateTimeOffset.Now.ToUnixTimeMilliseconds() > end_rumble_time_milliseconds) {
+                    controller_informed = false;
+                    end_rumble_time_milliseconds = 0;
+                    amp = 0;
+                }
+            }
             public byte[] GetData() {
                 byte[] rumble_data = new byte[8];
+
                 if (amp == 0.0f) {
                     rumble_data[0] = 0x0;
                     rumble_data[1] = 0x1;
@@ -243,12 +244,11 @@ namespace BetterJoyForCemu {
         public byte LED = 0x0;
 
         public string serial_number;
+        bool thirdParty = false;
 
         private float[] activeData;
 
-        public System.Windows.Forms.Button btn;
-
-        public Joycon(IntPtr handle_, bool imu, bool localize, float alpha, bool left, string path, string serialNum, int id = 0, bool isPro = false, bool isSnes = false, ushort[] custom_calib = null, ushort[] custom_calib2 = null) {
+        public Joycon(IntPtr handle_, bool imu, bool localize, float alpha, bool left, string path, string serialNum, int id = 0, bool isPro = false, bool isSnes = false, bool thirdParty = false) {
             serial_number = serialNum;
             activeData = new float[6];
             handle = handle_;
@@ -265,22 +265,20 @@ namespace BetterJoyForCemu {
             this.isPro = isPro || isSnes;
             this.isSnes = isSnes;
             isUSB = serialNum == "000000000001";
+            thirdParty = thirdParty;
 
             this.path = path;
 
             connection = isUSB ? 0x01 : 0x02;
 
-            this.custom_calib = custom_calib;
-            this.custom_calib2 = custom_calib2;
-
             if (showAsXInput) {
                 out_xbox = new OutputControllerXbox360();
-                out_xbox.FeedbackReceived += ReceiveRumble;
+                if (toRumble)
+                    out_xbox.FeedbackReceived += ReceiveRumble;
             }
 
             if (showAsDS4) {
                 out_ds4 = new OutputControllerDualShock4();
-
                 if (toRumble)
                     out_ds4.FeedbackReceived += Ds4_FeedbackReceived;
             }
@@ -319,28 +317,11 @@ namespace BetterJoyForCemu {
         public bool GetButtonUp(Button b) {
             return buttons_up[(int)b];
         }
-
-        public UInt16[] GetRawStick() {
-            return stick_precal;
-        }
-
-        public UInt16[] GetRawStick2() {
-            return stick2_precal;
-        }
-
-        public UInt16[] GetCustomCalib() {
-            return custom_calib;
-        }
-
-        public UInt16[] GetCustomCalib2() {
-            return custom_calib2;
-        }
-
         public float[] GetStick() {
-                return stick;
+            return stick;
         }
         public float[] GetStick2() {
-                return stick2;
+            return stick2;
         }
         public Vector3 GetGyro() {
             return gyr_g;
@@ -357,24 +338,16 @@ namespace BetterJoyForCemu {
             byte[] a = { 0x0 };
 
             // Connect
-            if (!isUSB) {
-                // Input report mode
-                Subcommand(0x03, new byte[] { 0x30 }, 1, false);
-
-                a[0] = 0x1;
-                dump_calibration_data();
-            } else {
-                Subcommand(0x03, new byte[] { 0x3f }, 1, false);
-
+            if (isUSB) {
                 a = Enumerable.Repeat((byte)0, 64).ToArray();
                 form.AppendTextBox("Using USB.\r\n");
 
                 a[0] = 0x80;
                 a[1] = 0x1;
                 HIDapi.hid_write(handle, a, new UIntPtr(2));
-                HIDapi.hid_read(handle, a, new UIntPtr(64));
+                HIDapi.hid_read_timeout(handle, a, new UIntPtr(64), 100);
 
-                if (a[2] != 0x3) {
+                if (a[3] == 0x3) {
                     PadMacAddress = new PhysicalAddress(new byte[] { a[9], a[8], a[7], a[6], a[5], a[4] });
                 }
 
@@ -382,18 +355,22 @@ namespace BetterJoyForCemu {
                 a = Enumerable.Repeat((byte)0, 64).ToArray();
                 a[0] = 0x80; a[1] = 0x2; // Handshake
                 HIDapi.hid_write(handle, a, new UIntPtr(2));
+                HIDapi.hid_read_timeout(handle, a, new UIntPtr(64), 100);
 
                 a[0] = 0x80; a[1] = 0x3; // 3Mbit baud rate
                 HIDapi.hid_write(handle, a, new UIntPtr(2));
+                HIDapi.hid_read_timeout(handle, a, new UIntPtr(64), 100);
 
                 a[0] = 0x80; a[1] = 0x2; // Handshake at new baud rate
                 HIDapi.hid_write(handle, a, new UIntPtr(2));
+                HIDapi.hid_read_timeout(handle, a, new UIntPtr(64), 100);
 
                 a[0] = 0x80; a[1] = 0x4; // Prevent HID timeout
                 HIDapi.hid_write(handle, a, new UIntPtr(2)); // doesn't actually prevent timout...
+                HIDapi.hid_read_timeout(handle, a, new UIntPtr(64), 100);
 
-                dump_calibration_data();
             }
+            dump_calibration_data();
 
             // Bluetooth manual pairing
             byte[] btmac_host = Program.btMAC.GetAddressBytes();
@@ -404,22 +381,17 @@ namespace BetterJoyForCemu {
             //Subcommand(0x01, new byte[] { 0x03 }, 1, true);
 
             BlinkHomeLight();
+            SetPlayerLED(leds_);
 
-            a[0] = leds_;
-            Subcommand(0x30, a, 1);
-            Subcommand(0x40, new byte[] { (imu_enabled ? (byte)0x1 : (byte)0x0) }, 1, true);
-            Subcommand(0x3, new byte[] { 0x30 }, 1, true);
-            Subcommand(0x48, new byte[] { 0x01 }, 1, true);
+            Subcommand(0x40, new byte[] { (imu_enabled ? (byte)0x1 : (byte)0x0) }, 1);
+            Subcommand(0x48, new byte[] { 0x01 }, 1);
 
-            Subcommand(0x41, new byte[] { 0x03, 0x00, 0x00, 0x01 }, 4, false); // higher gyro performance rate
+            Subcommand(0x41, new byte[] { 0x03, 0x00, 0x00, 0x01 }, 4); // higher gyro performance rate
 
+            Subcommand(0x3, new byte[] { 0x30 }, 1);
             DebugPrint("Done with init.", DebugType.COMMS);
 
             HIDapi.hid_set_nonblocking(handle, 1);
-
-            // send ping to USB to not time out instantly
-            if (isUSB)
-                SendRumble(rumble_obj.GetData());
 
             return 0;
         }
@@ -432,7 +404,7 @@ namespace BetterJoyForCemu {
             byte[] a = Enumerable.Repeat((byte)0xFF, 25).ToArray();
             a[0] = 0x18;
             a[1] = 0x01;
-            Subcommand(0x38, a, 25, false);
+            Subcommand(0x38, a, 25);
         }
 
         public void SetHomeLight(bool on) {
@@ -444,12 +416,12 @@ namespace BetterJoyForCemu {
                 a[0] = 0x10;
                 a[1] = 0x01;
             }
-            Subcommand(0x38, a, 25, false);
+            Subcommand(0x38, a, 25);
         }
 
         private void SetHCIState(byte state) {
             byte[] a = { state };
-            Subcommand(0x06, a, 1, false);
+            Subcommand(0x06, a, 1);
         }
 
         public void PowerOff() {
@@ -519,13 +491,12 @@ namespace BetterJoyForCemu {
             state = state_.NOT_ATTACHED;
         }
 
-        // TODO: Improve this loop, make USB not laggy
         private byte ts_en;
         private int ReceiveRaw() {
             if (handle == IntPtr.Zero) return -2;
-            HIDapi.hid_set_nonblocking(handle, 1);
             byte[] raw_buf = new byte[report_len];
             int ret = HIDapi.hid_read_timeout(handle, raw_buf, new UIntPtr(report_len), 5);
+
             if (ret > 0) {
                 // Process packets as soon as they come
                 for (int n = 0; n < 3; n++) {
@@ -627,11 +598,12 @@ namespace BetterJoyForCemu {
             }
         }
 
-        string extraGyroFeature = ConfigurationManager.AppSettings["GyroToJoyOrMouse"];
-        int GyroMouseSensitivity = Int32.Parse(ConfigurationManager.AppSettings["GyroMouseSensitivity"]);
         bool HomeLongPowerOff = Boolean.Parse(ConfigurationManager.AppSettings["HomeLongPowerOff"]);
         long PowerOffInactivityMins = Int32.Parse(ConfigurationManager.AppSettings["PowerOffInactivity"]);
 
+        string extraGyroFeature = ConfigurationManager.AppSettings["GyroToJoyOrMouse"];
+        int GyroMouseSensitivity = Int32.Parse(ConfigurationManager.AppSettings["GyroMouseSensitivity"]);
+        bool GyroHoldToggle = Boolean.Parse(ConfigurationManager.AppSettings["GyroHoldToggle"]);
         bool GyroAnalogSliders = Boolean.Parse(ConfigurationManager.AppSettings["GyroAnalogSliders"]);
         int GyroAnalogSensitivity = Int32.Parse(ConfigurationManager.AppSettings["GyroAnalogSensitivity"]);
         byte[] sliderVal = new byte[] { 0, 0 };
@@ -667,7 +639,7 @@ namespace BetterJoyForCemu {
             if (buttons_down[minusButton] && (timestamp - buttons_down_timestamp[powerOffButton]) / 10000000 > 5000) {
                 form.conBtnClick(btn, null);
             }
-            
+
             if (buttons_down[(int)Button.CAPTURE])
                 Simulate(Config.Value("capture"));
             if (buttons_down[(int)Button.HOME])
@@ -726,12 +698,18 @@ namespace BetterJoyForCemu {
                 // TODO
             } else if (extraGyroFeature == "mouse" && (isPro || (other == null) || (other != null && (Boolean.Parse(ConfigurationManager.AppSettings["GyroMouseLeftHanded"]) ? isLeft : !isLeft)))) {
                 string res_val = Config.Value("active_gyro");
+
                 if (res_val.StartsWith("joy_")) {
                     int i = Int32.Parse(res_val.Substring(4));
-                    if (buttons_down[i] || (other != null && other.buttons_down[i]))
-                        active_gyro = true;
-                    else if (buttons_up[i] || (other != null && other.buttons_up[i]))
-                        active_gyro = false;
+                    if (GyroHoldToggle) {
+                        if (buttons_down[i] || (other != null && other.buttons_down[i]))
+                            active_gyro = true;
+                        else if (buttons_up[i] || (other != null && other.buttons_up[i]))
+                            active_gyro = false;
+                    } else {
+                        if (buttons_down[i] || (other != null && other.buttons_down[i]))
+                            active_gyro = !active_gyro;
+                    }
                 }
 
                 float dt = 0.015f; // 15ms
@@ -754,24 +732,21 @@ namespace BetterJoyForCemu {
             }
         }
 
-        // TODO: Fix?
-        private Thread PollThreadObj; // pro times out over time randomly if it was USB and then bluetooth??
+        private Thread PollThreadObj;
         private void Poll() {
+            stop_polling = false;
             int attempts = 0;
-
             while (!stop_polling & state > state_.NO_JOYCONS) {
-                if (!isSnes && (rumble_obj.t > 0))
+                rumble_obj.Update();
+                if (!rumble_obj.controller_informed) {
                     SendRumble(rumble_obj.GetData());
-
+                    rumble_obj.controller_informed = true;
+                }
                 int a = ReceiveRaw();
 
                 if (a > 0 && state > state_.DROPPED) {
                     state = state_.IMU_DATA_OK;
                     attempts = 0;
-
-                    // Needed for USB to not time out; I think USB requires a reply message after every packet sent
-                    if (isUSB)
-                        SendRumble(rumble_obj.GetData());
                 } else if (attempts > 240) {
                     state = state_.DROPPED;
                     form.AppendTextBox("Dropped.\r\n");
@@ -790,25 +765,12 @@ namespace BetterJoyForCemu {
             }
         }
 
-        public void Update() {
-            if (state > state_.NO_JOYCONS) {
-                if (rumble_obj.timed_rumble) {
-                    if (rumble_obj.t < 0) {
-                        rumble_obj.set_vals(lowFreq, highFreq, 0, 0);
-                    } else {
-                        rumble_obj.t -= (1 / timing);
-                        //rumble_obj.amp = (float) Math.Sin(((timing - rumble_obj.t * 1000f) / timing) * Math.PI) * rumble_obj.fullamp;
-                    }
-                }
-            }
-        }
-
         public float[] otherStick = { 0, 0 };
 
         bool swapAB = Boolean.Parse(ConfigurationManager.AppSettings["SwapAB"]);
         bool swapXY = Boolean.Parse(ConfigurationManager.AppSettings["SwapXY"]);
         private int ProcessButtonsAndStick(byte[] report_buf) {
-            if (report_buf[0] == 0x00) return -1;
+            if (report_buf[0] == 0x00) throw new ArgumentException("received undefined report. This is probably a bug");
             if (!isSnes) {
                 stick_raw[0] = report_buf[6 + (isLeft ? 0 : 3)];
                 stick_raw[1] = report_buf[7 + (isLeft ? 0 : 3)];
@@ -824,32 +786,12 @@ namespace BetterJoyForCemu {
                 stick_precal[1] = (UInt16)((stick_raw[1] >> 4) | (stick_raw[2] << 4));
                 ushort[] cal = form.nonOriginal ? new ushort[6] { 2048, 2048, 2048, 2048, 2048, 2048 } : stick_cal;
                 ushort dz = form.nonOriginal ? (ushort)200 : deadzone;
-
-
-
-                if (custom_calib == null || custom_calib[0] == 0) {
-                    stick = CenterSticks(stick_precal, cal, dz);
-                } else {
-
-                    float x = Convert.ToSingle(stick_precal[0] - custom_calib[1]) / Convert.ToSingle(custom_calib[0] - custom_calib[1]);
-                    float y = Convert.ToSingle(stick_precal[1] - custom_calib[3]) / Convert.ToSingle(custom_calib[2] - custom_calib[3]);
-
-                    stick = new float[] { 2.1f * (x - 0.5f), 2.1f * (y - 0.5f) };
-                }
+                stick = CenterSticks(stick_precal, cal, dz);
 
                 if (isPro) {
                     stick2_precal[0] = (UInt16)(stick2_raw[0] | ((stick2_raw[1] & 0xf) << 8));
                     stick2_precal[1] = (UInt16)((stick2_raw[1] >> 4) | (stick2_raw[2] << 4));
-
-                    if (custom_calib2 == null || custom_calib2[0] == 0) {
-                        stick2 = CenterSticks(stick2_precal, form.nonOriginal ? cal : stick2_cal, deadzone2);
-                    } else {
-
-                        float x = Convert.ToSingle(stick2_precal[0] - custom_calib2[1]) / Convert.ToSingle(custom_calib2[0] - custom_calib2[1]);
-                        float y = Convert.ToSingle(stick2_precal[1] - custom_calib2[3]) / Convert.ToSingle(custom_calib2[2] - custom_calib2[3]);
-
-                        stick2 = new float[] { 2.1f * (x - 0.5f), 2.1f * (y - 0.5f) };
-                    }
+                    stick2 = CenterSticks(stick2_precal, form.nonOriginal ? cal : stick2_cal, deadzone2);
                 }
 
                 // Read other Joycon's sticks
@@ -1036,10 +978,6 @@ namespace BetterJoyForCemu {
             }
         }
 
-        public void Recenter() {
-            first_imu_packet = true;
-        }
-
         // Should really be called calculating stick data
         private float[] CenterSticks(UInt16[] vals, ushort[] cal, ushort dz) {
             ushort[] t = cal;
@@ -1062,9 +1000,9 @@ namespace BetterJoyForCemu {
             return (byte)Math.Max(Byte.MinValue, Math.Min(Byte.MaxValue, 127 - stick_value * Byte.MaxValue));
         }
 
-        public void SetRumble(float low_freq, float high_freq, float amp, int time = 0) {
+        public void SetRumble(float low_freq, float high_freq, float amp, int rumble_duration_ms = 0) {
             if (state <= Joycon.state_.ATTACHED) return;
-            rumble_obj.set_vals(low_freq, high_freq, amp, time);
+            rumble_obj.set_vals(low_freq, high_freq, amp, rumble_duration_ms);
         }
 
         private void SendRumble(byte[] buf) {
@@ -1090,16 +1028,47 @@ namespace BetterJoyForCemu {
             else ++global_count;
             if (print) { PrintArray(buf_, DebugType.COMMS, len, 11, "Subcommand 0x" + string.Format("{0:X2}", sc) + " sent. Data: 0x{0:S}"); };
             HIDapi.hid_write(handle, buf_, new UIntPtr(len + 11));
-            int res = HIDapi.hid_read_timeout(handle, response, new UIntPtr(report_len), 50);
-            if (res < 1) DebugPrint("No response.", DebugType.COMMS);
-            else if (print) { PrintArray(response, DebugType.COMMS, report_len - 1, 1, "Response ID 0x" + string.Format("{0:X2}", response[0]) + ". Data: 0x{0:S}"); }
+            int tries = 0;
+            do {
+
+                int res = HIDapi.hid_read_timeout(handle, response, new UIntPtr(report_len), 100);
+                if (res < 1) DebugPrint("No response.", DebugType.COMMS);
+                else if (print) { PrintArray(response, DebugType.COMMS, report_len - 1, 1, "Response ID 0x" + string.Format("{0:X2}", response[0]) + ". Data: 0x{0:S}"); }
+                tries++;
+            } while (tries < 10 && response[0] != 0x21 && response[14] != sc);
+
             return response;
         }
 
         private void dump_calibration_data() {
-            if (!isSnes) {
-                byte[] buf_ = ReadSPI(0x80, (isLeft ? (byte)0x12 : (byte)0x1d), 9); // get user calibration data if possible
-                bool found = false;
+            if (isSnes || thirdParty)
+                return;
+            HIDapi.hid_set_nonblocking(handle, 0);
+            byte[] buf_ = ReadSPI(0x80, (isLeft ? (byte)0x12 : (byte)0x1d), 9); // get user calibration data if possible
+            bool found = false;
+            for (int i = 0; i < 9; ++i) {
+                if (buf_[i] != 0xff) {
+                    form.AppendTextBox("Using user stick calibration data.\r\n");
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                form.AppendTextBox("Using factory stick calibration data.\r\n");
+                buf_ = ReadSPI(0x60, (isLeft ? (byte)0x3d : (byte)0x46), 9); // get user calibration data if possible
+            }
+            stick_cal[isLeft ? 0 : 2] = (UInt16)((buf_[1] << 8) & 0xF00 | buf_[0]); // X Axis Max above center
+            stick_cal[isLeft ? 1 : 3] = (UInt16)((buf_[2] << 4) | (buf_[1] >> 4));  // Y Axis Max above center
+            stick_cal[isLeft ? 2 : 4] = (UInt16)((buf_[4] << 8) & 0xF00 | buf_[3]); // X Axis Center
+            stick_cal[isLeft ? 3 : 5] = (UInt16)((buf_[5] << 4) | (buf_[4] >> 4));  // Y Axis Center
+            stick_cal[isLeft ? 4 : 0] = (UInt16)((buf_[7] << 8) & 0xF00 | buf_[6]); // X Axis Min below center
+            stick_cal[isLeft ? 5 : 1] = (UInt16)((buf_[8] << 4) | (buf_[7] >> 4));  // Y Axis Min below center
+
+            PrintArray(stick_cal, len: 6, start: 0, format: "Stick calibration data: {0:S}");
+
+            if (isPro) {
+                buf_ = ReadSPI(0x80, (!isLeft ? (byte)0x12 : (byte)0x1d), 9); // get user calibration data if possible
+                found = false;
                 for (int i = 0; i < 9; ++i) {
                     if (buf_[i] != 0xff) {
                         form.AppendTextBox("Using user stick calibration data.\r\n");
@@ -1109,94 +1078,71 @@ namespace BetterJoyForCemu {
                 }
                 if (!found) {
                     form.AppendTextBox("Using factory stick calibration data.\r\n");
-                    buf_ = ReadSPI(0x60, (isLeft ? (byte)0x3d : (byte)0x46), 9); // get user calibration data if possible
+                    buf_ = ReadSPI(0x60, (!isLeft ? (byte)0x3d : (byte)0x46), 9); // get user calibration data if possible
                 }
-                stick_cal[isLeft ? 0 : 2] = (UInt16)((buf_[1] << 8) & 0xF00 | buf_[0]); // X Axis Max above center
-                stick_cal[isLeft ? 1 : 3] = (UInt16)((buf_[2] << 4) | (buf_[1] >> 4));  // Y Axis Max above center
-                stick_cal[isLeft ? 2 : 4] = (UInt16)((buf_[4] << 8) & 0xF00 | buf_[3]); // X Axis Center
-                stick_cal[isLeft ? 3 : 5] = (UInt16)((buf_[5] << 4) | (buf_[4] >> 4));  // Y Axis Center
-                stick_cal[isLeft ? 4 : 0] = (UInt16)((buf_[7] << 8) & 0xF00 | buf_[6]); // X Axis Min below center
-                stick_cal[isLeft ? 5 : 1] = (UInt16)((buf_[8] << 4) | (buf_[7] >> 4));  // Y Axis Min below center
+                stick2_cal[!isLeft ? 0 : 2] = (UInt16)((buf_[1] << 8) & 0xF00 | buf_[0]); // X Axis Max above center
+                stick2_cal[!isLeft ? 1 : 3] = (UInt16)((buf_[2] << 4) | (buf_[1] >> 4));  // Y Axis Max above center
+                stick2_cal[!isLeft ? 2 : 4] = (UInt16)((buf_[4] << 8) & 0xF00 | buf_[3]); // X Axis Center
+                stick2_cal[!isLeft ? 3 : 5] = (UInt16)((buf_[5] << 4) | (buf_[4] >> 4));  // Y Axis Center
+                stick2_cal[!isLeft ? 4 : 0] = (UInt16)((buf_[7] << 8) & 0xF00 | buf_[6]); // X Axis Min below center
+                stick2_cal[!isLeft ? 5 : 1] = (UInt16)((buf_[8] << 4) | (buf_[7] >> 4));  // Y Axis Min below center
 
-                PrintArray(stick_cal, len: 6, start: 0, format: "Stick calibration data: {0:S}");
+                PrintArray(stick2_cal, len: 6, start: 0, format: "Stick calibration data: {0:S}");
 
-                if (isPro) {
-                    buf_ = ReadSPI(0x80, (!isLeft ? (byte)0x12 : (byte)0x1d), 9); // get user calibration data if possible
-                    found = false;
-                    for (int i = 0; i < 9; ++i) {
-                        if (buf_[i] != 0xff) {
-                            form.AppendTextBox("Using user stick calibration data.\r\n");
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        form.AppendTextBox("Using factory stick calibration data.\r\n");
-                        buf_ = ReadSPI(0x60, (!isLeft ? (byte)0x3d : (byte)0x46), 9); // get user calibration data if possible
-                    }
-                    stick2_cal[!isLeft ? 0 : 2] = (UInt16)((buf_[1] << 8) & 0xF00 | buf_[0]); // X Axis Max above center
-                    stick2_cal[!isLeft ? 1 : 3] = (UInt16)((buf_[2] << 4) | (buf_[1] >> 4));  // Y Axis Max above center
-                    stick2_cal[!isLeft ? 2 : 4] = (UInt16)((buf_[4] << 8) & 0xF00 | buf_[3]); // X Axis Center
-                    stick2_cal[!isLeft ? 3 : 5] = (UInt16)((buf_[5] << 4) | (buf_[4] >> 4));  // Y Axis Center
-                    stick2_cal[!isLeft ? 4 : 0] = (UInt16)((buf_[7] << 8) & 0xF00 | buf_[6]); // X Axis Min below center
-                    stick2_cal[!isLeft ? 5 : 1] = (UInt16)((buf_[8] << 4) | (buf_[7] >> 4));  // Y Axis Min below center
+                buf_ = ReadSPI(0x60, (!isLeft ? (byte)0x86 : (byte)0x98), 16);
+                deadzone2 = (UInt16)((buf_[4] << 8) & 0xF00 | buf_[3]);
+            }
 
-                    PrintArray(stick2_cal, len: 6, start: 0, format: "Stick calibration data: {0:S}");
+            buf_ = ReadSPI(0x60, (isLeft ? (byte)0x86 : (byte)0x98), 16);
+            deadzone = (UInt16)((buf_[4] << 8) & 0xF00 | buf_[3]);
 
-                    buf_ = ReadSPI(0x60, (!isLeft ? (byte)0x86 : (byte)0x98), 16);
-                    deadzone2 = (UInt16)((buf_[4] << 8) & 0xF00 | buf_[3]);
-                }
+            buf_ = ReadSPI(0x80, 0x28, 10);
+            acc_neutral[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
+            acc_neutral[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
+            acc_neutral[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
 
-                buf_ = ReadSPI(0x60, (isLeft ? (byte)0x86 : (byte)0x98), 16);
-                deadzone = (UInt16)((buf_[4] << 8) & 0xF00 | buf_[3]);
+            buf_ = ReadSPI(0x80, 0x2E, 10);
+            acc_sensiti[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
+            acc_sensiti[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
+            acc_sensiti[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
 
-                buf_ = ReadSPI(0x80, 0x28, 10);
+            buf_ = ReadSPI(0x80, 0x34, 10);
+            gyr_neutral[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
+            gyr_neutral[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
+            gyr_neutral[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
+
+            buf_ = ReadSPI(0x80, 0x3A, 10);
+            gyr_sensiti[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
+            gyr_sensiti[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
+            gyr_sensiti[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
+
+            PrintArray(gyr_neutral, len: 3, d: DebugType.IMU, format: "User gyro neutral position: {0:S}");
+
+            // This is an extremely messy way of checking to see whether there is user stick calibration data present, but I've seen conflicting user calibration data on blank Joy-Cons. Worth another look eventually.
+            if (gyr_neutral[0] + gyr_neutral[1] + gyr_neutral[2] == -3 || Math.Abs(gyr_neutral[0]) > 100 || Math.Abs(gyr_neutral[1]) > 100 || Math.Abs(gyr_neutral[2]) > 100) {
+                buf_ = ReadSPI(0x60, 0x20, 10);
                 acc_neutral[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
                 acc_neutral[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
                 acc_neutral[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
 
-                buf_ = ReadSPI(0x80, 0x2E, 10);
+                buf_ = ReadSPI(0x60, 0x26, 10);
                 acc_sensiti[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
                 acc_sensiti[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
                 acc_sensiti[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
 
-                buf_ = ReadSPI(0x80, 0x34, 10);
+                buf_ = ReadSPI(0x60, 0x2C, 10);
                 gyr_neutral[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
                 gyr_neutral[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
                 gyr_neutral[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
 
-                buf_ = ReadSPI(0x80, 0x3A, 10);
+                buf_ = ReadSPI(0x60, 0x32, 10);
                 gyr_sensiti[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
                 gyr_sensiti[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
                 gyr_sensiti[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
 
-                PrintArray(gyr_neutral, len: 3, d: DebugType.IMU, format: "User gyro neutral position: {0:S}");
-
-                // This is an extremely messy way of checking to see whether there is user stick calibration data present, but I've seen conflicting user calibration data on blank Joy-Cons. Worth another look eventually.
-                if (gyr_neutral[0] + gyr_neutral[1] + gyr_neutral[2] == -3 || Math.Abs(gyr_neutral[0]) > 100 || Math.Abs(gyr_neutral[1]) > 100 || Math.Abs(gyr_neutral[2]) > 100) {
-                    buf_ = ReadSPI(0x60, 0x20, 10);
-                    acc_neutral[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
-                    acc_neutral[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
-                    acc_neutral[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
-
-                    buf_ = ReadSPI(0x60, 0x26, 10);
-                    acc_sensiti[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
-                    acc_sensiti[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
-                    acc_sensiti[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
-
-                    buf_ = ReadSPI(0x60, 0x2C, 10);
-                    gyr_neutral[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
-                    gyr_neutral[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
-                    gyr_neutral[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
-
-                    buf_ = ReadSPI(0x60, 0x32, 10);
-                    gyr_sensiti[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
-                    gyr_sensiti[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
-                    gyr_sensiti[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
-
-                    PrintArray(gyr_neutral, len: 3, d: DebugType.IMU, format: "Factory gyro neutral position: {0:S}");
-                }
+                PrintArray(gyr_neutral, len: 3, d: DebugType.IMU, format: "Factory gyro neutral position: {0:S}");
             }
+            HIDapi.hid_set_nonblocking(handle, 1);
         }
 
         private byte[] ReadSPI(byte addr1, byte addr2, uint len, bool print = false) {

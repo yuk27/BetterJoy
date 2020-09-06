@@ -12,8 +12,10 @@ using System.ServiceProcess;
 using System.Text;
 using System.Threading;
 using System.Timers;
+using System.Web.Configuration;
 using System.Windows.Forms;
 using Nefarius.ViGEm.Client;
+using static BetterJoyForCemu._3rdPartyControllers;
 using static BetterJoyForCemu.HIDapi;
 
 namespace BetterJoyForCemu {
@@ -88,48 +90,62 @@ namespace BetterJoyForCemu {
         }
 
         void CheckForNewControllersTime(Object source, ElapsedEventArgs e) {
+            CleanUp();
             if (Config.IntValue("ProgressiveScan") == 1) {
                 CheckForNewControllers();
             }
         }
 
-        public void CheckForNewControllers() {
-            CleanUp();
-
-            // Add instance of 3rdParty type selector
-            Selector3rdPartyType selector = new Selector3rdPartyType();
-            ushort[] custom_calib = null;
-            ushort[] custom_calib2 = null;
-            if (form.nonOriginal) {
-                selector.Load();
+        private ushort TypeToProdId(byte type) {
+            switch (type) {
+                case 1:
+                    return product_pro;
+                case 2:
+                    return product_l;
+                case 3:
+                    return product_r;
             }
+            return 0;
+        }
 
+        public void CheckForNewControllers() {
             // move all code for initializing devices here and well as the initial code from Start()
             bool isLeft = false;
-            IntPtr ptr = HIDapi.hid_enumerate(vendor_id, 0x0);
+            IntPtr ptr = HIDapi.hid_enumerate(0x0, 0x0);
             IntPtr top_ptr = ptr;
 
             hid_device_info enumerate; // Add device to list
             bool foundNew = false;
             while (ptr != IntPtr.Zero) {
+                SController thirdParty = null;
                 enumerate = (hid_device_info)Marshal.PtrToStructure(ptr, typeof(hid_device_info));
 
-                if (enumerate.serial_number == null) {
+                /*if (enumerate.serial_number == null) {
                     ptr = enumerate.next; // can't believe it took me this long to figure out why USB connections used up so much CPU.
                                           // it was getting stuck in an inf loop here!
                     continue;
-                }
+                }*/
 
-                if (form.nonOriginal && enumerate.product_string != "Nintendo RVL-CNT-01") {
-                    enumerate.product_id = selector.GetProductId(enumerate.serial_number); // Check if this is a known controller
-                    custom_calib = selector.GetCalib(enumerate.serial_number);
-                    custom_calib2 = selector.GetCalib2(enumerate.serial_number);
+                if (form.nonOriginal) {
+                    enumerate.product_id = product_pro;
                 }
 
                 bool validController = (enumerate.product_id == product_l || enumerate.product_id == product_r ||
-                                        enumerate.product_id == product_pro || enumerate.product_id == product_snes);
+                                        enumerate.product_id == product_pro || enumerate.product_id == product_snes) && enumerate.vendor_id == vendor_id;
+                // check list of custom controllers specified
+                foreach (SController v in Program.thirdPartyCons) {
+                    if (enumerate.vendor_id == v.vendor_id && enumerate.product_id == v.product_id) {
+                        validController = true;
+                        thirdParty = v;
+                        break;
+                    }
+                }
+
+                ushort prod_id = thirdParty == null ? enumerate.product_id : TypeToProdId(thirdParty.type);
+                if (prod_id == 0)
+                    continue; // controller was not assigned a type
                 if (validController && !ControllerAlreadyAdded(enumerate.path)) {
-                    switch (enumerate.product_id) {
+                    switch (prod_id) {
                         case product_l:
                             isLeft = true;
                             form.AppendTextBox("Left Joy-Con connected.\r\n"); break;
@@ -176,9 +192,9 @@ namespace BetterJoyForCemu {
                         break;
                     }
 
-                    bool isPro = enumerate.product_id == product_pro;
-                    bool isSnes = enumerate.product_id == product_snes;
-                    j.Add(new Joycon(handle, EnableIMU, EnableLocalize & EnableIMU, 0.05f, isLeft, enumerate.path, enumerate.serial_number, j.Count, isPro, isSnes, custom_calib, custom_calib2));
+                    bool isPro = prod_id == product_pro;
+                    bool isSnes = prod_id == product_snes;
+                    j.Add(new Joycon(handle, EnableIMU, EnableLocalize & EnableIMU, 0.05f, isLeft, enumerate.path, enumerate.serial_number, j.Count, isPro, isSnes, thirdParty != null));
 
                     foundNew = true;
                     j.Last().form = form;
@@ -189,7 +205,7 @@ namespace BetterJoyForCemu {
                             ii++;
                             if (!v.Enabled) {
                                 System.Drawing.Bitmap temp;
-                                switch (enumerate.product_id) {
+                                switch (prod_id) {
                                     case (product_l):
                                         temp = Properties.Resources.jc_left_s; break;
                                     case (product_r):
@@ -202,13 +218,10 @@ namespace BetterJoyForCemu {
                                         temp = Properties.Resources.cross; break;
                                 }
 
-                                j.Last().btn = v;
-
                                 v.Invoke(new MethodInvoker(delegate {
                                     v.Tag = j.Last(); // assign controller to button
                                     v.Enabled = true;
                                     v.Click += new EventHandler(form.conBtnClick);
-                                    v.MouseDown += new MouseEventHandler(form.Config3rdParty); // Add Handler for the 3rd party type selector
                                     v.BackgroundImage = temp;
                                 }));
 
@@ -223,8 +236,12 @@ namespace BetterJoyForCemu {
                     }
 
                     byte[] mac = new byte[6];
-                    for (int n = 0; n < 6; n++)
-                        mac[n] = byte.Parse(enumerate.serial_number.Substring(n * 2, 2), System.Globalization.NumberStyles.HexNumber);
+                    try {
+                        for (int n = 0; n < 6; n++)
+                            mac[n] = byte.Parse(enumerate.serial_number.Substring(n * 2, 2), System.Globalization.NumberStyles.HexNumber);
+                    } catch (Exception e) {
+                        // could not parse mac address
+                    }
                     j[j.Count - 1].PadMacAddress = new PhysicalAddress(mac);
                 }
 
@@ -242,7 +259,7 @@ namespace BetterJoyForCemu {
                             v.other = temp;
 
                             //Set both Joycon LEDs to the one with the lowest ID
-                            byte led = temp.LED <= v.LED ? temp.LED : v.LED;
+                            byte led = Math.Min(temp.LED, v.LED);
                             temp.LED = led;
                             v.LED = led;
                             temp.SetPlayerLED(led);
@@ -286,7 +303,12 @@ namespace BetterJoyForCemu {
                     if (jc.out_ds4 != null)
                         jc.out_ds4.Connect();
 
-                    jc.Attach(leds_: jc.LED);
+                    try {
+                        jc.Attach(leds_: jc.LED);
+                    } catch (Exception e) {
+                        jc.state = Joycon.state_.DROPPED;
+                        continue;
+                    }
 
                     bool on = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None).AppSettings.Settings["HomeLEDOn"].Value.ToLower() == "true";
                     foreach (Joycon j in Program.mgr.j) {
@@ -302,17 +324,12 @@ namespace BetterJoyForCemu {
             }
         }
 
-        public void Update() {
-            for (int i = 0; i < j.Count; ++i)
-                j[i].Update();
-        }
-
         public void OnApplicationQuit() {
             foreach (Joycon v in j) {
                 if (Boolean.Parse(ConfigurationManager.AppSettings["AutoPowerOff"]))
                     v.PowerOff();
-                else
-                    v.Detach();
+
+                v.Detach();
 
                 if (v.out_xbox != null) {
                     v.out_xbox.Disconnect();
@@ -328,64 +345,25 @@ namespace BetterJoyForCemu {
         }
     }
 
-    // Custom timer class because system timers have a limit of 15.6ms
-    class HighResTimer {
-        double interval = 0;
-        double frequency = 0;
-
-        Thread thread;
-
-        public delegate void ActionDelegate();
-        ActionDelegate func;
-
-        bool run = false;
-
-        public HighResTimer(double f, ActionDelegate a) {
-            frequency = f;
-            interval = 1.0 / f;
-
-            func = a;
-        }
-
-        public void Start() {
-            run = true;
-            thread = new Thread(new ThreadStart(Run));
-            thread.IsBackground = true;
-            thread.Start();
-        }
-
-        void Run() {
-            while (run) {
-                func();
-                int timeToSleep = (int)(interval * 1000);
-                Thread.Sleep(timeToSleep);
-            }
-        }
-
-        public void Stop() {
-            run = false;
-        }
-    }
-
     class Program {
         public static PhysicalAddress btMAC = new PhysicalAddress(new byte[] { 0, 0, 0, 0, 0, 0 });
         public static UdpServer server;
-        static double pollsPerSecond = 120.0;
 
         public static ViGEmClient emClient;
 
         private static readonly HttpClient client = new HttpClient();
 
         public static JoyconManager mgr;
-        static HighResTimer timer;
         static string pid;
 
         static MainForm form;
 
         static public bool useHIDG = Boolean.Parse(ConfigurationManager.AppSettings["UseHIDG"]);
 
-        private static WindowsInput.Events.Sources.IKeyboardEventSource keyboard;
-        private static WindowsInput.Events.Sources.IMouseEventSource mouse;
+        public static List<SController> thirdPartyCons = new List<SController>();
+
+        private static WindowsInput.EventSources.IKeyboardEventSource keyboard;
+        private static WindowsInput.EventSources.IMouseEventSource mouse;
 
         public static void Start() {
             pid = Process.GetCurrentProcess().Id.ToString(); // get current process id for HidCerberus.Srv
@@ -444,6 +422,10 @@ namespace BetterJoyForCemu {
                 }
             }
 
+            // a bit hacky
+            _3rdPartyControllers partyForm = new _3rdPartyControllers();
+            partyForm.CopyCustomControllers();
+
             mgr = new JoyconManager();
             mgr.form = form;
             mgr.Awake();
@@ -454,8 +436,6 @@ namespace BetterJoyForCemu {
             server.form = form;
 
             server.Start(IPAddress.Parse(ConfigurationManager.AppSettings["IP"]), Int32.Parse(ConfigurationManager.AppSettings["Port"]));
-            timer = new HighResTimer(pollsPerSecond, new HighResTimer.ActionDelegate(mgr.Update));
-            timer.Start();
 
             // Capture keyboard + mouse events for binding's sake
             keyboard = WindowsInput.Capture.Global.KeyboardAsync();
@@ -466,7 +446,7 @@ namespace BetterJoyForCemu {
             form.console.AppendText("All systems go\r\n");
         }
 
-        private static void Mouse_MouseEvent(object sender, WindowsInput.Events.Sources.EventSourceEventArgs<WindowsInput.Events.Sources.MouseEvent> e) {
+        private static void Mouse_MouseEvent(object sender, WindowsInput.EventSources.EventSourceEventArgs<WindowsInput.EventSources.MouseEvent> e) {
             if (e.Data.ButtonDown != null) {
                 string res_val = Config.Value("reset_mouse");
                 if (res_val.StartsWith("mse_"))
@@ -489,7 +469,7 @@ namespace BetterJoyForCemu {
             }
         }
 
-        private static void Keyboard_KeyEvent(object sender, WindowsInput.Events.Sources.EventSourceEventArgs<WindowsInput.Events.Sources.KeyboardEvent> e) {
+        private static void Keyboard_KeyEvent(object sender, WindowsInput.EventSources.EventSourceEventArgs<WindowsInput.EventSources.KeyboardEvent> e) {
             if (e.Data.KeyDown != null) {
                 string res_val = Config.Value("reset_mouse");
                 if (res_val.StartsWith("key_"))
@@ -529,11 +509,10 @@ namespace BetterJoyForCemu {
 
             keyboard.Dispose(); mouse.Dispose();
             server.Stop();
-            timer.Stop();
             mgr.OnApplicationQuit();
         }
 
-        private static string appGuid = "04450797-3520-462e-a563-107677a483d8"; // randomly-generated
+        private static string appGuid = "1bf709e9-c133-41df-933a-c9ff3f664c7b"; // randomly-generated
         static void Main(string[] args) {
             using (Mutex mutex = new Mutex(false, "Global\\" + appGuid)) {
                 if (!mutex.WaitOne(0, false)) {
