@@ -154,6 +154,7 @@
     <Compile Include="Reassign.Designer.cs">
       <DependentUpon>Reassign.cs</DependentUpon>
     </Compile>
+    <Compile Include="Selector3rdPartyType.cs" />
     <Compile Include="UpdServer.cs" />
   </ItemGroup>
   <ItemGroup>
