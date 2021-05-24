@@ -248,6 +248,7 @@ namespace BetterJoyForCemu {
 
         private float[] activeData;
 
+        public System.Windows.Forms.Button btn; //TODO: Btn instance associated to the controller
         public Joycon(IntPtr handle_, bool imu, bool localize, float alpha, bool left, string path, string serialNum, int id = 0, bool isPro = false, bool isSnes = false, bool thirdParty = false) {
             serial_number = serialNum;
             activeData = new float[6];

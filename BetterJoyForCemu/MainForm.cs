@@ -429,5 +429,31 @@ namespace BetterJoyForCemu {
             }
             return -1;
         }
+
+        bool form3rdPartyActive = false; // Use to make sure only one instance is opened at the same time
+
+        public void Config3rdParty(object sender, MouseEventArgs e) { // MIO
+            Button button = sender as Button;
+
+            if (nonOriginal && !form3rdPartyActive && e.Button == MouseButtons.Right && button.Tag.GetType() == typeof(Joycon)) {
+                Joycon v = (Joycon)button.Tag;
+                Config3rdPartyForm configForm = new Config3rdPartyForm(v);
+                configForm.FormClosing += new FormClosingEventHandler(Form1_FormClosing);
+                configForm.Show();
+                form3rdPartyActive = true;
+            }
+
+        }
+
+        private void Form1_FormClosing(object sender, EventArgs e) { // MIO
+            form3rdPartyActive = false;
+            Config3rdPartyForm instance3rdPartyForm = (Config3rdPartyForm)sender;
+            if (instance3rdPartyForm.getStatus()) {
+                Application.Restart();
+                Environment.Exit(0);
+            }
+        }
+
     }
+
 }

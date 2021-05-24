@@ -218,10 +218,14 @@ namespace BetterJoyForCemu {
                                         temp = Properties.Resources.cross; break;
                                 }
 
+
+                                j.Last().btn = v; //TODO assign the btn to the controller
+
                                 v.Invoke(new MethodInvoker(delegate {
                                     v.Tag = j.Last(); // assign controller to button
                                     v.Enabled = true;
                                     v.Click += new EventHandler(form.conBtnClick);
+                                    v.MouseDown += new MouseEventHandler(form.Config3rdParty); // Add Handler for the 3rd party type selector
                                     v.BackgroundImage = temp;
                                 }));
 
@@ -229,6 +233,7 @@ namespace BetterJoyForCemu {
                                     form.loc[ii].Tag = v;
                                     form.loc[ii].Click += new EventHandler(form.locBtnClick);
                                 }));
+
 
                                 break;
                             }
