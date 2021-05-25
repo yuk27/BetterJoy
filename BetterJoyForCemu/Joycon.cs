@@ -248,8 +248,11 @@ namespace BetterJoyForCemu {
 
         private float[] activeData;
 
+        private ushort[] custom_calib;
+        private ushort[] custom_calib2;
+
         public System.Windows.Forms.Button btn; //TODO: Btn instance associated to the controller
-        public Joycon(IntPtr handle_, bool imu, bool localize, float alpha, bool left, string path, string serialNum, int id = 0, bool isPro = false, bool isSnes = false, bool thirdParty = false) {
+        public Joycon(IntPtr handle_, bool imu, bool localize, float alpha, bool left, string path, string serialNum, int id = 0, bool isPro = false, bool isSnes = false, ushort[] custom_calib_input = null, ushort[] custom_calib2_input = null, bool thirdParty = false) {
             serial_number = serialNum;
             activeData = new float[6];
             handle = handle_;
@@ -266,7 +269,10 @@ namespace BetterJoyForCemu {
             this.isPro = isPro || isSnes;
             this.isSnes = isSnes;
             isUSB = serialNum == "000000000001";
-            thirdParty = thirdParty;
+            this.thirdParty = thirdParty;
+
+            this.custom_calib = custom_calib_input;
+            this.custom_calib2 = custom_calib2_input;
 
             this.path = path;
 
@@ -318,6 +324,22 @@ namespace BetterJoyForCemu {
         public bool GetButtonUp(Button b) {
             return buttons_up[(int)b];
         }
+        public UInt16[] GetRawStick() {
+            return stick_precal;
+        }
+
+        public UInt16[] GetRawStick2() {
+            return stick2_precal;
+        }
+
+        public UInt16[] GetCustomCalib() {
+            return custom_calib;
+        }
+
+        public UInt16[] GetCustomCalib2() {
+            return custom_calib2;
+        }
+
         public float[] GetStick() {
             return stick;
         }
@@ -330,6 +352,7 @@ namespace BetterJoyForCemu {
         public Vector3 GetAccel() {
             return acc_g;
         }
+
         public int Attach(byte leds_ = 0x0) {
             state = state_.ATTACHED;
 
