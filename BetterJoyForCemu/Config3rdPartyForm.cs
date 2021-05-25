@@ -143,11 +143,12 @@ namespace BetterJoyForCemu {
             // serial_label
             // 
             this.serial_label.AutoSize = true;
-            this.serial_label.Location = new System.Drawing.Point(12, 237);
+            this.serial_label.Location = new System.Drawing.Point(4, 237);
             this.serial_label.Name = "serial_label";
             this.serial_label.Size = new System.Drawing.Size(46, 17);
             this.serial_label.TabIndex = 1;
             this.serial_label.Text = "label1";
+            this.serial_label.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // panel1
             // 
@@ -235,7 +236,7 @@ namespace BetterJoyForCemu {
             // 
             this.LeftJoyOutput.AutoSize = true;
             this.LeftJoyOutput.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.LeftJoyOutput.Location = new System.Drawing.Point(27, 208);
+            this.LeftJoyOutput.Location = new System.Drawing.Point(24, 208);
             this.LeftJoyOutput.Name = "LeftJoyOutput";
             this.LeftJoyOutput.Size = new System.Drawing.Size(78, 17);
             this.LeftJoyOutput.TabIndex = 7;
@@ -271,6 +272,7 @@ namespace BetterJoyForCemu {
             this.ClearBtn.TabIndex = 10;
             this.ClearBtn.Text = "Clear";
             this.ClearBtn.UseVisualStyleBackColor = true;
+            this.ClearBtn.Click += new System.EventHandler(this.ClearBtn_Click);
             // 
             // Config3rdPartyForm
             // 
@@ -305,6 +307,13 @@ namespace BetterJoyForCemu {
             else if (RightRadio.Checked) selector.Add(j.serial_number, (ushort)controllerType.product_r, calib, calib2);
             else if (ProRadio.Checked) selector.Add(j.serial_number, (ushort)controllerType.product_pro, calib, calib2);
             else if (SnesRadio.Checked) selector.Add(j.serial_number, (ushort)controllerType.product_snes, calib, calib2);
+            changed = true;
+            selector.Save();
+        }
+
+
+        private void ClearBtn_Click(object sender, EventArgs e) {
+            selector.Remove(j.serial_number);
             changed = true;
             selector.Save();
         }
@@ -449,5 +458,6 @@ namespace BetterJoyForCemu {
         private void RightJoystick_Click(object sender, EventArgs e) {
 
         }
+
     }
 }

@@ -90,6 +90,17 @@ namespace BetterJoyForCemu {
             }
         }
 
+        public void Remove(string serial) {
+
+            var serialList = Controllers.Where(c => c.serial == serial).ToList(); //Search the serial on the list
+            
+            if (serialList.Count() != 0) { // If the controller doesnt exist already add it
+                List<Controller> coo = Controllers.Where(c => c.serial == serial).ToList();
+                Controllers.Remove(Controllers.Where(c => c.serial == serial).ToList()[0]);
+            }
+
+        }
+
         public ushort GetProductId(string serial) {
 
             try {
