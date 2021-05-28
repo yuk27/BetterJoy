@@ -801,12 +801,33 @@ namespace BetterJoyForCemu {
                 stick_precal[1] = (UInt16)((stick_raw[1] >> 4) | (stick_raw[2] << 4));
                 ushort[] cal = form.nonOriginal ? new ushort[6] { 2048, 2048, 2048, 2048, 2048, 2048 } : stick_cal;
                 ushort dz = form.nonOriginal ? (ushort)200 : deadzone;
-                stick = CenterSticks(stick_precal, cal, dz);
+
+                if (custom_calib == null || custom_calib[0] == 0) {
+                    stick = CenterSticks(stick_precal, cal, dz);
+                } else {
+
+                    float x = Convert.ToSingle(stick_precal[0] - custom_calib[1]) / Convert.ToSingle(custom_calib[0] - custom_calib[1]);
+                    float y = Convert.ToSingle(stick_precal[1] - custom_calib[3]) / Convert.ToSingle(custom_calib[2] - custom_calib[3]);
+
+                    stick = new float[] { 2.1f * (x - 0.5f), 2.1f * (y - 0.5f) };
+                }
+
 
                 if (isPro) {
                     stick2_precal[0] = (UInt16)(stick2_raw[0] | ((stick2_raw[1] & 0xf) << 8));
                     stick2_precal[1] = (UInt16)((stick2_raw[1] >> 4) | (stick2_raw[2] << 4));
-                    stick2 = CenterSticks(stick2_precal, form.nonOriginal ? cal : stick2_cal, deadzone2);
+
+                    if (custom_calib2 == null || custom_calib2[0] == 0) {
+                        stick2 = CenterSticks(stick2_precal, form.nonOriginal ? cal : stick2_cal, deadzone2);
+                    } else {
+
+                        float x = Convert.ToSingle(stick2_precal[0] - custom_calib2[1]) / Convert.ToSingle(custom_calib2[0] - custom_calib2[1]);
+                        float y = Convert.ToSingle(stick2_precal[1] - custom_calib2[3]) / Convert.ToSingle(custom_calib2[2] - custom_calib2[3]);
+
+                        stick2 = new float[] { 2.1f * (x - 0.5f), 2.1f * (y - 0.5f) };
+                    }
+
+
                 }
 
                 // Read other Joycon's sticks
